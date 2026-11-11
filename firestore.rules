@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.uid in ['HdjYQysrWQULnoylyfW8sWTO71n1'];
+    }
+
+    match /student_registrations/{studentId} {
+      allow create: if request.resource.data.keys().hasAll([
+          'fullName', 'email', 'phone', 'department', 'institution', 'address', 'createdAt'
+        ])
+        && request.resource.data.keys().hasOnly([
+          'fullName', 'email', 'phone', 'department', 'institution', 'address', 'attended', 'createdAt'
+        ])
+        && (!('attended' in request.resource.data.keys())
+          || (request.resource.data.attended is bool && request.resource.data.attended == false))
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() > 0
+        && request.resource.data.fullName.size() <= 120
+        && request.resource.data.email is string
+        && request.resource.data.email.size() > 0
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() > 0
+        && request.resource.data.phone.size() <= 120
+        && request.resource.data.department is string
+        && request.resource.data.department.size() > 0
+        && request.resource.data.department.size() <= 120
+        && request.resource.data.institution is string
+        && request.resource.data.institution.size() <= 120
+        && request.resource.data.address is string
+        && request.resource.data.address.size() <= 240
+        && request.resource.data.createdAt == request.time;
+
+      allow read, delete: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['attended'])
+        && request.resource.data.attended is bool;
+    }
+  }
+}
